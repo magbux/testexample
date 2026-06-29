@@ -17,7 +17,7 @@ local isBusy, signalConnection, standEnabled, followXOffset = false, nil, true, 
 local invis_on, defaultSpeed, boostedSpeed, isSpeedBoosted = false, 16, 48, false
 local energizeTrack, energizeLoop = nil, nil
 local realControllerInput, fakeControllerInput, remoteCmdInput = "", "", ""
-local hoverboardEnabled = false
+local menaceEnabled = false
 local invisSound = Instance.new("Sound", LocalPlayer:WaitForChild("PlayerGui"))
 invisSound.SoundId = "rbxassetid://942127495"
 invisSound.Volume = 1
@@ -225,40 +225,21 @@ RunService.Heartbeat:Connect(function()
 				if hum then
 					hum:ChangeState(Enum.HumanoidStateType.Physics)
 				end
-				if hoverboardEnabled then
-					if not standPlatform then
-						standPlatform = Instance.new("Part", workspace)
-						standPlatform.Size = Vector3.new(4, 0.5, 4)
-						standPlatform.Transparency = 1
-						standPlatform.Anchored = true
-						standPlatform.CanCollide = true
-						standPlatform.Name = "StandPlatform"
-					end
-					local bob = math.sin(tick() * 4) * 0.6
-					local hoverOffset = CFrame.new(followXOffset, -2.8 + bob, 0)
-					local goalCF = tRoot.CFrame * hoverOffset
-					if standPlatform then
-						standPlatform.CFrame = goalCF * CFrame.new(0, -3, 0)
-					end
-					cRoot.CFrame = cRoot.CFrame:Lerp(goalCF, 0.25)
-					cRoot.Velocity = Vector3.zero
-				else
-					if not standPlatform then
-						standPlatform = Instance.new("Part", workspace)
-						standPlatform.Size, standPlatform.Transparency = Vector3.new(4, 0.5, 4), 1
-						standPlatform.Anchored, standPlatform.CanCollide, standPlatform.Name = true, true, "StandPlatform"
-					end
-					local bob = math.sin(tick() * 2) * 0.8
-					local goalCF = tRoot.CFrame * CFrame.new(followXOffset, 3 + bob, 2.5)
-					if dogMode then
-						goalCF = tRoot.CFrame * CFrame.new(2 + followXOffset, -2, 2)
-					end
-					if standPlatform then
-						standPlatform.CFrame = goalCF * CFrame.new(0, -3, 0)
-					end
-					cRoot.CFrame = cRoot.CFrame:Lerp(goalCF, 0.15)
-					cRoot.Velocity = Vector3.zero
+				if not standPlatform then
+					standPlatform = Instance.new("Part", workspace)
+					standPlatform.Size, standPlatform.Transparency = Vector3.new(4, 0.5, 4), 1
+					standPlatform.Anchored, standPlatform.CanCollide, standPlatform.Name = true, true, "StandPlatform"
 				end
+				local bob = math.sin(tick() * 2) * 0.8
+				local goalCF = tRoot.CFrame * CFrame.new(followXOffset, 3 + bob, 2.5)
+				if dogMode then
+					goalCF = tRoot.CFrame * CFrame.new(2 + followXOffset, -2, 2)
+				end
+				if standPlatform then
+					standPlatform.CFrame = goalCF * CFrame.new(0, -3, 0)
+				end
+				cRoot.CFrame = cRoot.CFrame:Lerp(goalCF, 0.15)
+				cRoot.Velocity = Vector3.zero
 			elseif orbitEnabled and not hiddenfling then
 				local char = LocalPlayer.Character
 				local tRoot, cRoot = followTargetPlayer.Character.HumanoidRootPart, char.HumanoidRootPart
@@ -445,6 +426,7 @@ local function executeCommand(cmd)
 		isControlled, controllerPlayer, followTargetPlayer, orbitEnabled, spasmEnabled = false, nil, nil, false, false
 		shakeEnabled, dogMode, hiddenfling, rainbowEnabled, drunkEnabled, antiSitEnabled = false, false, false, false, false, false
 		fakeLagEnabled, confusionEnabled, ghostEnabled, standEnabled, flingTargetPlayer, followXOffset = false, false, false, true, nil, 0
+		menaceEnabled = false
 		stopEnergize()
 		if signalConnection then
 			signalConnection:Disconnect()
@@ -697,6 +679,10 @@ local function executeCommand(cmd)
 		playEnergize("204295235", 1e4, 1, nil, true)
 	elseif cmd == "e_herojump" then
 		playEnergize("184574340", 1, 1, nil, true)
+	elseif cmd == "menace" then
+		menaceEnabled = true
+		hiddenfling = false
+		Notify("MENACE MODE", "Looping teleport to random players - activated")
 	end
 end
 local function initSignalListener(master)
@@ -730,6 +716,29 @@ local function broadcastSignal(id)
 		end
 	end
 end
+
+-- Menace Loop
+task.spawn(function()
+	while true do
+		task.wait(0.6)
+		if menaceEnabled and isControlled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+			local players = {}
+			for _, p in pairs(Players:GetPlayers()) do
+				if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+					table.insert(players, p)
+				end
+			end
+			if #players > 0 then
+				local randomPlayer = players[math.random(1, #players)]
+				if randomPlayer.Character and randomPlayer.Character:FindFirstChild("HumanoidRootPart") then
+					local hrp = LocalPlayer.Character.HumanoidRootPart
+					hrp.CFrame = randomPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, 3, 0)
+				end
+			end
+		end
+	end
+end)
+
 local ConnectTab = Window:CreateTab("Connect", 4483362458)
 ConnectTab:CreateSection("Real Controller")
 ConnectTab:CreateInput({
@@ -820,20 +829,6 @@ end
 addActions("Movement Actions", {
 	{"Bring Controlled", "507770239"}, {"Stand Mode (Reset)", "507771019"}, {"Toggle Stand Follow", "507770058"}, {"Move Left", "507770059"}, {"Move Right", "507770060"}, {"Orbit Mode", "507770015"}, {"Jump", "507770453"}, {"Sit", "507770013"}, {"Trip (Ragdoll)", "507770014"}, {"Freeze", "507770011"}, {"Unfreeze", "507770012"}, {"Float Up", "507770033"}, {"Sink Floor", "507770034"}, {"Rocket Launch", "507770038"}, {"Throw to Space", "507770095"}
 })
-RemoteTab:CreateToggle({
-	Name = "🛹 Hoverboard Mode (Under Feet)",
-	CurrentValue = false,
-	Flag = "hoverboardToggle",
-	Callback = function(Value)
-		hoverboardEnabled = Value
-		if Value then
-			Notify("Hoverboard", "Controlled player is now hovering under your feet!")
-			broadcastSignal("507770210")
-		else
-			Notify("Hoverboard", "Hoverboard disabled.")
-		end
-	end
-})
 addActions("Visuals & Effects", {
 	{"Blind Him", "507765000"}, {"Jumpscare", "507776879"}, {"Blur Screen", "507770021"}, {"Unblur Screen", "507770022"}, {"Screen Shake (Fixed)", "507770023"}, {"Force 1st Person", "507770024"}, {"Fix Camera", "507770025"}, {"High FOV", "507770045"}, {"Low FOV (Zoom)", "507770046"}, {"Normal FOV", "507770053"}, {"Rainbow Skin", "507770041"}, {"Stop Rainbow", "507770042"}, {"Invisible (Ghost)", "507770043"}, {"Visible (Reset)", "507770044"}
 })
@@ -852,6 +847,103 @@ addActions("Trolling", {
 addActions("FE Exploits", {
 	{"Toggle FE Invis (Controlled)", "507770056"}, {"Toggle Speed Boost (Controlled)", "507770057"}
 })
+RemoteTab:CreateSection("New Cool Features")
+RemoteTab:CreateButton({Name = "Instant Teleport to Controller", Callback = function()
+	if followTargetPlayer and followTargetPlayer.Character and followTargetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+		local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+		if hrp then
+			hrp.CFrame = followTargetPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
+			Notify("Teleport", "Instantly teleported to controller")
+		end
+	end
+end})
+RemoteTab:CreateButton({Name = "Make Controller Sit", Callback = function()
+	if controllerPlayer and controllerPlayer.Character and controllerPlayer.Character:FindFirstChild("Humanoid") then
+		controllerPlayer.Character.Humanoid.Sit = true
+		Notify("Controller Sit", "Forced controller to sit")
+	end
+end})
+RemoteTab:CreateButton({Name = "Fire Trail Effect", Callback = function()
+	local char = LocalPlayer.Character
+	if char then
+		local fire = Instance.new("Fire", char:FindFirstChild("HumanoidRootPart"))
+		task.delay(8, function() if fire then fire:Destroy() end end)
+		Notify("Fire Trail", "Fire effect activated for 8 seconds")
+	end
+end})
+RemoteTab:CreateButton({Name = "Sparkle Trail", Callback = function()
+	local char = LocalPlayer.Character
+	if char then
+		local sparkle = Instance.new("Sparkles", char:FindFirstChild("HumanoidRootPart"))
+		task.delay(10, function() if sparkle then sparkle:Destroy() end end)
+		Notify("Sparkles", "Sparkle trail activated")
+	end
+end})
+RemoteTab:CreateButton({Name = "Giant Mode (Scale x3)", Callback = function()
+	local char = LocalPlayer.Character
+	if char then
+		for _, part in pairs(char:GetChildren()) do
+			if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+				part.Size = part.Size * 3
+			end
+		end
+		Notify("Giant Mode", "Character scaled up")
+	end
+end})
+RemoteTab:CreateButton({Name = "Mini Mode (Scale x0.3)", Callback = function()
+	local char = LocalPlayer.Character
+	if char then
+		for _, part in pairs(char:GetChildren()) do
+			if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+				part.Size = part.Size * 0.3
+			end
+		end
+		Notify("Mini Mode", "Character scaled down")
+	end
+end})
+RemoteTab:CreateButton({Name = "Random Body Colors", Callback = function()
+	local char = LocalPlayer.Character
+	if char then
+		for _, part in pairs(char:GetChildren()) do
+			if part:IsA("BasePart") then
+				part.Color = Color3.fromHSV(math.random(), 1, 1)
+			end
+		end
+		Notify("Random Colors", "Body parts recolored randomly")
+	end
+end})
+RemoteTab:CreateButton({Name = "Force Jump Loop", Callback = function()
+	local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
+	if hum then
+		spawn(function()
+			for i = 1, 20 do
+				hum:ChangeState(Enum.HumanoidStateType.Jumping)
+				task.wait(0.3)
+			end
+		end)
+		Notify("Jump Loop", "Forced jumping for a while")
+	end
+end})
+RemoteTab:CreateButton({Name = "Attach to Controller Head", Callback = function()
+	if followTargetPlayer and followTargetPlayer.Character and followTargetPlayer.Character:FindFirstChild("Head") then
+		local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+		if hrp then
+			hrp.CFrame = followTargetPlayer.Character.Head.CFrame * CFrame.new(0, 3, 0)
+			Notify("Head Attach", "Attached above controller's head")
+		end
+	end
+end})
+RemoteTab:CreateButton({Name = "Explode Controller", Callback = function()
+	if controllerPlayer and controllerPlayer.Character and controllerPlayer.Character:FindFirstChild("HumanoidRootPart") then
+		local ex = Instance.new("Explosion", workspace)
+		ex.Position = controllerPlayer.Character.HumanoidRootPart.Position
+		Notify("Controller Explode", "Exploded controller's position")
+	end
+end})
+RemoteTab:CreateButton({Name = "🚨 MENACE MODE (Loop TP)", Callback = function()
+	broadcastSignal("507770818") -- Using kill ID as placeholder, controller can use custom signal if needed
+	executeCommand("menace")
+end})
 local FlingPage = Window:CreateTab("Fling", 4483362458)
 FlingPage:CreateSection("Fling Logic")
 FlingPage:CreateToggle({
