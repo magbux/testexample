@@ -682,7 +682,7 @@ local function executeCommand(cmd)
 	elseif cmd == "menace" then
 		menaceEnabled = true
 		hiddenfling = false
-		Notify("MENACE MODE", "Looping teleport to random players - activated")
+		Notify("MENACE MODE", "Looping random teleport activated on controlled")
 	end
 end
 local function initSignalListener(master)
@@ -717,7 +717,6 @@ local function broadcastSignal(id)
 	end
 end
 
--- Menace Loop
 task.spawn(function()
 	while true do
 		task.wait(0.6)
@@ -836,7 +835,8 @@ addActions("Body Modifications", {
 	{"Headless", "507770017"}, {"Remove Arms", "507770018"}, {"Naked", "507770032"}, {"Block Head", "507770039"}, {"Creepy Crawl", "507770040"}, {"Spinbot", "507772104"}, {"Spasm/Glitch", "507770030"}, {"Friend Mode", "507770035"}, {"Unfriend", "507770036"}
 })
 addActions("Destructive", {
-	{"Kill", "507770818"}, {"Explode", "507770019"}, {"Void N Fix", "507771955"}, {"Fling Nearest (To Master)", "507771666"}, {"Kick", "507770020"}
+	{"Kill", "507770818"}, {"Explode", "507770019"}, {"Void N Fix", "507771955"}, {"Fling Nearest (To Master)", "507771666"}, {"Kick", "507770020"},
+	{"Menace Mode", "menace"}
 })
 addActions("Environment", {
 	{"Slow Walk", "507770026"}, {"Super Speed", "507770027"}, {"Low Gravity", "507770028"}, {"Reset Physics/Speed", "507770031"}, {"Bow", "507770037"}, {"Free All", "507766388"}
@@ -847,39 +847,24 @@ addActions("Trolling", {
 addActions("FE Exploits", {
 	{"Toggle FE Invis (Controlled)", "507770056"}, {"Toggle Speed Boost (Controlled)", "507770057"}
 })
-RemoteTab:CreateSection("New Cool Features")
-RemoteTab:CreateButton({Name = "Instant Teleport to Controller", Callback = function()
-	if followTargetPlayer and followTargetPlayer.Character and followTargetPlayer.Character:FindFirstChild("HumanoidRootPart") then
-		local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-		if hrp then
-			hrp.CFrame = followTargetPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
-			Notify("Teleport", "Instantly teleported to controller")
-		end
-	end
-end})
-RemoteTab:CreateButton({Name = "Make Controller Sit", Callback = function()
-	if controllerPlayer and controllerPlayer.Character and controllerPlayer.Character:FindFirstChild("Humanoid") then
-		controllerPlayer.Character.Humanoid.Sit = true
-		Notify("Controller Sit", "Forced controller to sit")
-	end
-end})
+RemoteTab:CreateSection("New Features")
 RemoteTab:CreateButton({Name = "Fire Trail Effect", Callback = function()
 	local char = LocalPlayer.Character
-	if char then
-		local fire = Instance.new("Fire", char:FindFirstChild("HumanoidRootPart"))
-		task.delay(8, function() if fire then fire:Destroy() end end)
-		Notify("Fire Trail", "Fire effect activated for 8 seconds")
+	if char and char:FindFirstChild("HumanoidRootPart") then
+		local fire = Instance.new("Fire", char.HumanoidRootPart)
+		task.delay(8, function() if fire and fire.Parent then fire:Destroy() end end)
+		Notify("Fire Trail", "Fire effect activated on controlled")
 	end
 end})
 RemoteTab:CreateButton({Name = "Sparkle Trail", Callback = function()
 	local char = LocalPlayer.Character
-	if char then
-		local sparkle = Instance.new("Sparkles", char:FindFirstChild("HumanoidRootPart"))
-		task.delay(10, function() if sparkle then sparkle:Destroy() end end)
-		Notify("Sparkles", "Sparkle trail activated")
+	if char and char:FindFirstChild("HumanoidRootPart") then
+		local sparkle = Instance.new("Sparkles", char.HumanoidRootPart)
+		task.delay(10, function() if sparkle and sparkle.Parent then sparkle:Destroy() end end)
+		Notify("Sparkles", "Sparkle trail activated on controlled")
 	end
 end})
-RemoteTab:CreateButton({Name = "Giant Mode (Scale x3)", Callback = function()
+RemoteTab:CreateButton({Name = "Giant Mode", Callback = function()
 	local char = LocalPlayer.Character
 	if char then
 		for _, part in pairs(char:GetChildren()) do
@@ -887,10 +872,10 @@ RemoteTab:CreateButton({Name = "Giant Mode (Scale x3)", Callback = function()
 				part.Size = part.Size * 3
 			end
 		end
-		Notify("Giant Mode", "Character scaled up")
+		Notify("Giant Mode", "Controlled character scaled up")
 	end
 end})
-RemoteTab:CreateButton({Name = "Mini Mode (Scale x0.3)", Callback = function()
+RemoteTab:CreateButton({Name = "Mini Mode", Callback = function()
 	local char = LocalPlayer.Character
 	if char then
 		for _, part in pairs(char:GetChildren()) do
@@ -898,7 +883,7 @@ RemoteTab:CreateButton({Name = "Mini Mode (Scale x0.3)", Callback = function()
 				part.Size = part.Size * 0.3
 			end
 		end
-		Notify("Mini Mode", "Character scaled down")
+		Notify("Mini Mode", "Controlled character scaled down")
 	end
 end})
 RemoteTab:CreateButton({Name = "Random Body Colors", Callback = function()
@@ -909,7 +894,7 @@ RemoteTab:CreateButton({Name = "Random Body Colors", Callback = function()
 				part.Color = Color3.fromHSV(math.random(), 1, 1)
 			end
 		end
-		Notify("Random Colors", "Body parts recolored randomly")
+		Notify("Random Colors", "Controlled body parts recolored")
 	end
 end})
 RemoteTab:CreateButton({Name = "Force Jump Loop", Callback = function()
@@ -921,7 +906,7 @@ RemoteTab:CreateButton({Name = "Force Jump Loop", Callback = function()
 				task.wait(0.3)
 			end
 		end)
-		Notify("Jump Loop", "Forced jumping for a while")
+		Notify("Jump Loop", "Forced jumping on controlled")
 	end
 end})
 RemoteTab:CreateButton({Name = "Attach to Controller Head", Callback = function()
@@ -929,20 +914,17 @@ RemoteTab:CreateButton({Name = "Attach to Controller Head", Callback = function(
 		local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
 		if hrp then
 			hrp.CFrame = followTargetPlayer.Character.Head.CFrame * CFrame.new(0, 3, 0)
-			Notify("Head Attach", "Attached above controller's head")
+			Notify("Head Attach", "Controlled attached above controller head")
 		end
 	end
 end})
-RemoteTab:CreateButton({Name = "Explode Controller", Callback = function()
-	if controllerPlayer and controllerPlayer.Character and controllerPlayer.Character:FindFirstChild("HumanoidRootPart") then
+RemoteTab:CreateButton({Name = "Explode Controlled", Callback = function()
+	local char = LocalPlayer.Character
+	if char and char:FindFirstChild("HumanoidRootPart") then
 		local ex = Instance.new("Explosion", workspace)
-		ex.Position = controllerPlayer.Character.HumanoidRootPart.Position
-		Notify("Controller Explode", "Exploded controller's position")
+		ex.Position = char.HumanoidRootPart.Position
+		Notify("Explode", "Exploded controlled player")
 	end
-end})
-RemoteTab:CreateButton({Name = "🚨 MENACE MODE (Loop TP)", Callback = function()
-	broadcastSignal("507770818") -- Using kill ID as placeholder, controller can use custom signal if needed
-	executeCommand("menace")
 end})
 local FlingPage = Window:CreateTab("Fling", 4483362458)
 FlingPage:CreateSection("Fling Logic")
