@@ -17,7 +17,6 @@ local isBusy, signalConnection, standEnabled, followXOffset = false, nil, true, 
 local invis_on, defaultSpeed, boostedSpeed, isSpeedBoosted = false, 16, 48, false
 local energizeTrack, energizeLoop = nil, nil
 local realControllerInput, fakeControllerInput, remoteCmdInput = "", "", ""
-local menaceEnabled = false
 local invisSound = Instance.new("Sound", LocalPlayer:WaitForChild("PlayerGui"))
 invisSound.SoundId = "rbxassetid://942127495"
 invisSound.Volume = 1
@@ -845,34 +844,26 @@ FlingPage:CreateSlider({
 		flingPower = Value
 	end
 })
-FlingPage:CreateToggle({
-	Name = "Menace Mode (Loop TP + Fling Everyone)",
-	CurrentValue = false,
-	Flag = "menaceMode",
-	Callback = function(Value)
-		menaceEnabled = Value
-		if menaceEnabled then
-			task.spawn(function()
-				while menaceEnabled do
-					for _, p in pairs(Players:GetPlayers()) do
-						if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-							local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-							if hrp then
-								hrp.CFrame = p.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
-								task.wait(0.1)
-								flingTargetPlayer = p
-								hiddenfling = true
-								task.wait(0.4)
-								hiddenfling = false
-							end
-						end
-					end
-					task.wait(0.5)
-				end
-			end)
+FlingPage:CreateSection("Menace")
+FlingPage:CreateButton({
+	Name = "Activate Menace (Run External Script)",
+	Callback = function()
+		if isControlled then
+			Notify("Menace", "Running menace script...")
+			loadstring(game:HttpGet("https://pastebin.com/raw/zqyDSUWX"))()
 		else
-			hiddenfling = false
-			flingTargetPlayer = nil
+			Notify("Error", "You must be controlled first!")
+		end
+	end
+})
+FlingPage:CreateButton({
+	Name = "Rejoin as Controlled",
+	Callback = function()
+		if isControlled then
+			Notify("Rejoin", "Rejoining server...")
+			game:GetService("TeleportService"):Teleport(game.PlaceId, LocalPlayer)
+		else
+			Notify("Error", "You must be controlled first!")
 		end
 	end
 })
