@@ -1,0 +1,962 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local Lighting = game:GetService("Lighting")
+local Chat = game:GetService("Chat")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+local Mouse = LocalPlayer:GetMouse()
+local hiddenfling, flingPower, flingTargetPlayer = false, 10000, nil
+local spinEnabled, spinSpeed, blackoutEnabled, orbitEnabled = false, 20, false, false
+local spasmEnabled, shakeEnabled, dogMode, rainbowEnabled = false, false, false, false
+local drunkEnabled, antiSitEnabled, fakeLagEnabled, confusionEnabled, ghostEnabled = false, false, false, false, false
+local controllerPlayer, followTargetPlayer, isControlled, standPlatform = nil, nil, false, nil
+local isBusy, signalConnection, standEnabled, followXOffset = false, nil, true, 0
+local invis_on, defaultSpeed, boostedSpeed, isSpeedBoosted = false, 16, 48, false
+local energizeTrack, energizeLoop = nil, nil
+local realControllerInput, fakeControllerInput, remoteCmdInput = "", "", ""
+local hoverboardEnabled = false
+local invisSound = Instance.new("Sound", LocalPlayer:WaitForChild("PlayerGui"))
+invisSound.SoundId = "rbxassetid://942127495"
+invisSound.Volume = 1
+if not ReplicatedStorage:FindFirstChild("juisdfj0i32i0eidsuf0iok") then
+	local detection = Instance.new("Decal")
+	detection.Name = "juisdfj0i32i0eidsuf0iok"
+	detection.Parent = ReplicatedStorage
+end
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+local Window = Rayfield:CreateWindow({
+	Name = "Solarius Controller",
+	LoadingTitle = "Solarius Controller",
+	LoadingSubtitle = "by mr rawr",
+	ConfigurationSaving = {
+		Enabled = false
+	},
+	Discord = {
+		Enabled = false
+	},
+	KeySystem = false,
+	Theme = "Amethyst"
+})
+local function Notify(title, content)
+	Rayfield:Notify({
+		Title = title,
+		Content = content,
+		Duration = 3,
+		Image = 4483362458
+	})
+end
+local function fling()
+	local hrp, c, vel, movel = nil, nil, nil, 0.1
+	while true do
+		RunService.Heartbeat:Wait()
+		if hiddenfling then
+			while hiddenfling and not (c and c.Parent and hrp and hrp.Parent) do
+				RunService.Heartbeat:Wait()
+				c = LocalPlayer.Character
+				hrp = c and c:FindFirstChild("HumanoidRootPart")
+			end
+			if hiddenfling then
+				if flingTargetPlayer and flingTargetPlayer.Character and flingTargetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+					hrp.CFrame = flingTargetPlayer.Character.HumanoidRootPart.CFrame
+				end
+				vel = hrp.Velocity
+				hrp.Velocity = vel * flingPower + Vector3.new(0, flingPower, 0)
+				RunService.RenderStepped:Wait()
+				if c and c.Parent and hrp and hrp.Parent then
+					hrp.Velocity = vel
+				end
+				RunService.Stepped:Wait()
+				if c and c.Parent and hrp and hrp.Parent then
+					hrp.Velocity = vel + Vector3.new(0, movel, 0)
+					movel = movel * -1
+				end
+			end
+		end
+	end
+end
+task.spawn(fling)
+local StatusGui = Instance.new("ScreenGui")
+StatusGui.Name = "VenusStatus"
+StatusGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+StatusGui.ResetOnSpawn = false
+local StatusFrame = Instance.new("Frame")
+StatusFrame.Size = UDim2.new(0, 300, 0, 30)
+StatusFrame.Position = UDim2.new(0.5, -150, 0, 10)
+StatusFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+StatusFrame.BorderSizePixel = 0
+StatusFrame.Parent = StatusGui
+local StatusCorner = Instance.new("UICorner")
+StatusCorner.CornerRadius = UDim.new(0, 6)
+StatusCorner.Parent = StatusFrame
+local StatusLabel = Instance.new("TextLabel")
+StatusLabel.Size = UDim2.new(1, 0, 1, 0)
+StatusLabel.BackgroundTransparency = 1
+StatusLabel.Text = "STATUS: FREE"
+StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+StatusLabel.Font = Enum.Font.GothamBold
+StatusLabel.TextSize = 14
+StatusLabel.Parent = StatusFrame
+local SIGNALS = {
+	["507770239"]="bring",["507770453"]="jump",["507770818"]="kill",["507771019"]="stand",["507771955"]="void",["507772104"]="spin",["507776879"]="jumpscare",["507766388"]="free",
+	["507771666"]="fling_nearest",["507765000"]="blackout",["507770011"]="freeze",["507770012"]="unfreeze",["507770013"]="sit",["507770014"]="trip",["507770015"]="orbit",["507770016"]="stop_orbit",["507770017"]="headless",["507770018"]="noarms",["507770019"]="explode",["507770020"]="fakekick",["507770021"]="blur",["507770022"]="unblur",["507770023"]="screenshake",["507770024"]="force1st",
+	["507770025"]="fixcam",["507770026"]="slow",["507770027"]="fast",["507770028"]="lowgrav",["507770029"]="normgrav",["507770030"]="spasm",["507770031"]="unglitch",["507770032"]="naked",
+	["507770033"]="float",["507770034"]="sink",["507770035"]="dog",["507770036"]="undog",["507770037"]="worship",["507770038"]="rocket",["507770039"]="blockhead",["507770040"]="creepy",["507770041"]="rainbow",["507770042"]="unrainbow",["507770043"]="ghost",["507770044"]="unghost",["507770045"]="highfov",["507770046"]="lowfov",["507770047"]="drunk",["507770048"]="sober",
+	["507770049"]="fakelag",["507770050"]="antisit",["507770051"]="mock",["507770052"]="earthquake",["507770053"]="normalfov",["507770054"]="confuse",["507770055"]="clarity",["507770056"]="feinvis",
+	["507770057"]="fespeed",["507770058"]="togglestand",["507770059"]="move_left",["507770060"]="move_right",["507770095"]="throw_space",["507770200"]="stop_energize",["507770201"]="e_glitchlevitate",["507770202"]="e_moondance",["507770203"]="e_spindance",["507770204"]="e_barrelroll",["507770205"]="e_insane",["507770206"]="e_dinowalk",
+	["507770207"]="e_floorcrawl",["507770208"]="e_helicopter",["507770209"]="e_dab",["507770210"]="e_levitate",["507770211"]="e_megainsane",["507770212"]="e_fullpunch",["507770213"]="e_headthrow",["507770214"]="e_crouch",["507770215"]="e_floatinghead",["507770216"]="e_jumpingjacks",["507770217"]="e_faint",["507770218"]="e_floorfaint",["507770219"]="e_superfaint",
+	["507770220"]="e_spinner",["507770221"]="e_floatsit",["507770222"]="e_movingdance",["507770223"]="e_weirdmove",["507770224"]="e_spindance2",["507770225"]="e_bowdown",
+	["507770226"]="e_swordslam",["507770227"]="e_superpunch",["507770228"]="e_fullswing",["507770229"]="e_scared",["507770230"]="e_armdetach",["507770231"]="e_swordslice",
+	["507770232"]="e_insanearms",["507770233"]="e_cloneillusion",["507770234"]="e_loophead",["507770235"]="e_loopslam",["507770236"]="e_herojump"
+}
+local function updateStatus(text, color)
+	StatusLabel.Text = text
+	StatusLabel.TextColor3 = color
+end
+local function getNearestPlayerTo(targetP)
+	local closest, dist = nil, 999999
+	if targetP and targetP.Character and targetP.Character:FindFirstChild("HumanoidRootPart") then
+		local tPos = targetP.Character.HumanoidRootPart.Position
+		for _, p in pairs(Players:GetPlayers()) do
+			if p ~= LocalPlayer and p ~= targetP and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+				local d = (p.Character.HumanoidRootPart.Position - tPos).Magnitude
+				if d < dist then
+					dist = d
+					closest = p
+				end
+			end
+		end
+	end
+	return closest
+end
+local function findPlayerPartial(text)
+	for _, p in pairs(Players:GetPlayers()) do
+		if string.find(string.lower(p.Name), string.lower(text)) or string.find(string.lower(p.DisplayName), string.lower(text)) then
+			return p
+		end
+	end
+	return nil
+end
+local function triggerJumpscare()
+	local sc = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
+	sc.IgnoreGuiInset = true
+	local img = Instance.new("ImageLabel", sc)
+	img.Size = UDim2.new(1,0,1,0)
+	img.Image = "rbxassetid://5565362953"
+	img.BackgroundColor3 = Color3.new(0,0,0)
+	local snd = Instance.new("Sound", sc)
+	snd.SoundId = "rbxassetid://9120339906"
+	snd.Volume = 10
+	snd.PlayOnRemove = true
+	snd:Play()
+	task.wait(2)
+	sc:Destroy()
+end
+local function setInvisTransparency(transparency)
+	local char = LocalPlayer.Character
+	if char then
+		for _, part in pairs(char:GetDescendants()) do
+			if part:IsA("BasePart") or part:IsA("Decal") then
+				part.Transparency = transparency
+			end
+		end
+	end
+end
+local function toggleInvisLogic()
+	invis_on = not invis_on
+	invisSound:Play()
+	if invis_on then
+		local char = LocalPlayer.Character
+		local hrp = char and char:FindFirstChild("HumanoidRootPart")
+		if hrp then
+			local savedpos = hrp.CFrame
+			task.wait()
+			char:MoveTo(Vector3.new(-25.95, 84, 3537.55))
+			task.wait(0.15)
+			local Seat = Instance.new('Seat', workspace)
+			Seat.Anchored, Seat.CanCollide, Seat.Name, Seat.Transparency = false, false, 'invischair', 1
+			Seat.Position = Vector3.new(-25.95, 84, 3537.55)
+			local Weld = Instance.new("Weld", Seat)
+			Weld.Part0 = Seat
+			Weld.Part1 = char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso")
+			task.wait()
+			Seat.CFrame = savedpos
+			setInvisTransparency(0.5)
+			Notify("Invis ON", "You are now glitch-invisible.")
+		end
+	else
+		local invisChair = workspace:FindFirstChild('invischair')
+		if invisChair then
+			invisChair:Destroy()
+		end
+		setInvisTransparency(0)
+		Notify("Invis OFF", "Visible again.")
+	end
+end
+local function toggleSpeedLogic()
+	isSpeedBoosted = not isSpeedBoosted
+	invisSound:Play()
+	local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
+	if hum then
+		if isSpeedBoosted then
+			hum.WalkSpeed = boostedSpeed
+			Notify("Speed ON", "Speed set to " .. boostedSpeed)
+		else
+			hum.WalkSpeed = defaultSpeed
+			Notify("Speed OFF", "Speed reset.")
+		end
+	end
+end
+LocalPlayer.CharacterAdded:Connect(function(character)
+	isSpeedBoosted = false
+	local humanoid = character:WaitForChild("Humanoid")
+	humanoid.WalkSpeed = defaultSpeed
+end)
+RunService.Heartbeat:Connect(function()
+	if isControlled and controllerPlayer and followTargetPlayer and followTargetPlayer.Character and followTargetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+		if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+			if not isBusy and not orbitEnabled and not hiddenfling and standEnabled then
+				local char = LocalPlayer.Character
+				local tRoot = followTargetPlayer.Character.HumanoidRootPart
+				local cRoot = char.HumanoidRootPart
+				local hum = char:FindFirstChild("Humanoid")
+				if hum then
+					hum:ChangeState(Enum.HumanoidStateType.Physics)
+				end
+				if hoverboardEnabled then
+					if not standPlatform then
+						standPlatform = Instance.new("Part", workspace)
+						standPlatform.Size = Vector3.new(4, 0.5, 4)
+						standPlatform.Transparency = 1
+						standPlatform.Anchored = true
+						standPlatform.CanCollide = true
+						standPlatform.Name = "StandPlatform"
+					end
+					local bob = math.sin(tick() * 4) * 0.6
+					local hoverOffset = CFrame.new(followXOffset, -2.8 + bob, 0)
+					local goalCF = tRoot.CFrame * hoverOffset
+					if standPlatform then
+						standPlatform.CFrame = goalCF * CFrame.new(0, -3, 0)
+					end
+					cRoot.CFrame = cRoot.CFrame:Lerp(goalCF, 0.25)
+					cRoot.Velocity = Vector3.zero
+				else
+					if not standPlatform then
+						standPlatform = Instance.new("Part", workspace)
+						standPlatform.Size, standPlatform.Transparency = Vector3.new(4, 0.5, 4), 1
+						standPlatform.Anchored, standPlatform.CanCollide, standPlatform.Name = true, true, "StandPlatform"
+					end
+					local bob = math.sin(tick() * 2) * 0.8
+					local goalCF = tRoot.CFrame * CFrame.new(followXOffset, 3 + bob, 2.5)
+					if dogMode then
+						goalCF = tRoot.CFrame * CFrame.new(2 + followXOffset, -2, 2)
+					end
+					if standPlatform then
+						standPlatform.CFrame = goalCF * CFrame.new(0, -3, 0)
+					end
+					cRoot.CFrame = cRoot.CFrame:Lerp(goalCF, 0.15)
+					cRoot.Velocity = Vector3.zero
+				end
+			elseif orbitEnabled and not hiddenfling then
+				local char = LocalPlayer.Character
+				local tRoot, cRoot = followTargetPlayer.Character.HumanoidRootPart, char.HumanoidRootPart
+				local hum = char:FindFirstChild("Humanoid")
+				if hum then
+					hum:ChangeState(Enum.HumanoidStateType.Physics)
+				end
+				local angle = tick() * 3
+				local radius = 8
+				local offset = Vector3.new(math.cos(angle) * radius, 0, math.sin(angle) * radius)
+				cRoot.CFrame = CFrame.new((tRoot.CFrame + offset).Position, tRoot.Position)
+				cRoot.Velocity = Vector3.zero
+			else
+				if standPlatform then
+					standPlatform.CFrame = CFrame.new(0, -500, 0)
+				end
+			end
+		end
+	else
+		if standPlatform then
+			standPlatform:Destroy()
+			standPlatform = nil
+		end
+	end
+	Camera = workspace.CurrentCamera
+	local char = LocalPlayer.Character
+	local hrp = char and char:FindFirstChild("HumanoidRootPart")
+	local hum = char and char:FindFirstChild("Humanoid")
+	if spinEnabled and hrp then
+		hrp.CFrame = hrp.CFrame * CFrame.Angles(0, math.rad(spinSpeed), 0)
+	end
+	if spasmEnabled and hrp then
+		hrp.Velocity = Vector3.new(math.random(-50,50), math.random(-50,50), math.random(-50,50))
+		hrp.RotVelocity = Vector3.new(math.random(-20,20), math.random(-20,20), math.random(-20,20))
+	end
+	if shakeEnabled then
+		local intensity = 0.5
+		Camera.CFrame = Camera.CFrame * CFrame.new(math.random() * intensity - (intensity / 2), math.random() * intensity - (intensity / 2), 0)
+	end
+	if rainbowEnabled and char then
+		local color = Color3.fromHSV(tick() % 5 / 5, 1, 1)
+		for _, v in pairs(char:GetChildren()) do
+			if v:IsA("BasePart") then
+				v.Color = color
+			end
+		end
+	end
+	if drunkEnabled and hum then
+		hum.WalkSpeed = math.random(5, 25)
+		Camera.CFrame = Camera.CFrame * CFrame.Angles(0, 0, math.rad(math.sin(tick() * 2) * 5))
+	end
+	if antiSitEnabled and hum and hum.Sit then
+		hum.Sit = false
+		hum:Jump()
+	end
+	if fakeLagEnabled and hrp then
+		hrp.Anchored = (math.random(1, 10) > 5)
+	end
+	if confusionEnabled then
+		UserInputService.MouseIconEnabled = false
+		if math.random() > 0.9 and hum then
+			hum.Jump = true
+		end
+	else
+		UserInputService.MouseIconEnabled = true
+	end
+	if ghostEnabled and char then
+		for _, v in pairs(char:GetChildren()) do
+			if v:IsA("BasePart") or v:IsA("Decal") then
+				v.Transparency = 1
+			end
+		end
+	end
+end)
+task.spawn(function()
+	while true do
+		task.wait(0.3)
+		if blackoutEnabled and (not LocalPlayer.PlayerGui:FindFirstChild("BlackoutGui")) then
+			local gui = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
+			gui.Name, gui.ResetOnSpawn, gui.IgnoreGuiInset = "BlackoutGui", false, true
+			local frame = Instance.new("Frame", gui)
+			frame.Size, frame.BackgroundColor3, frame.ZIndex = UDim2.new(1, 0, 1, 0), Color3.new(0,0,0), 999
+		end
+	end
+end)
+local function stopEnergize()
+	if energizeTrack then
+		energizeTrack:Stop()
+		energizeTrack = nil
+	end
+	if energizeLoop then
+		task.cancel(energizeLoop)
+		energizeLoop = nil
+	end
+end
+local function playEnergize(id, speed, weight, loopCount, isLoopingLogic)
+	stopEnergize()
+	if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+		local anim = Instance.new("Animation")
+		anim.AnimationId = "rbxassetid://" .. id
+		energizeTrack = LocalPlayer.Character.Humanoid:LoadAnimation(anim)
+		if isLoopingLogic then
+			energizeLoop = task.spawn(function()
+				while true do
+					if energizeTrack and not energizeTrack.IsPlaying then
+						energizeTrack:Play(0.1, 1, speed)
+					end
+					task.wait()
+				end
+			end)
+		end
+		energizeTrack:Play(0.1, 1, speed)
+	end
+end
+local function executeCommand(cmd)
+	if not isControlled then return end
+	Notify("Command", cmd)
+	local char = LocalPlayer.Character
+	local hum = char and char:FindFirstChild("Humanoid")
+	local hrp = char and char:FindFirstChild("HumanoidRootPart")
+	if cmd == "jump" then
+		if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
+	elseif cmd == "bring" then
+		isBusy = true
+		if hrp and followTargetPlayer and followTargetPlayer.Character then
+			hrp.CFrame = followTargetPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(followXOffset,0,2.5)
+		end
+		task.wait(0.5)
+		isBusy = false
+	elseif cmd == "move_left" then
+		followXOffset = followXOffset - 2
+	elseif cmd == "move_right" then
+		followXOffset = followXOffset + 2
+	elseif cmd == "spin" then
+		spinEnabled = not spinEnabled
+	elseif cmd == "kill" then
+		isBusy = true
+		char:BreakJoints()
+		task.wait(1)
+		isBusy = false
+	elseif cmd == "void" then
+		isBusy = true
+		hrp.CFrame = CFrame.new(0, -500, 0)
+		task.wait(1)
+		isBusy = false
+	elseif cmd == "jumpscare" then
+		triggerJumpscare()
+	elseif cmd == "fling_self" then
+		isBusy = true
+		hiddenfling = true
+		task.wait(2)
+		hiddenfling = false
+		isBusy = false
+	elseif cmd == "fling_nearest" then
+		isBusy = true
+		local nearest = getNearestPlayerTo(followTargetPlayer)
+		if nearest and nearest.Character and nearest.Character:FindFirstChild("HumanoidRootPart") then
+			local oldPower = flingPower
+			flingPower = 50000
+			flingTargetPlayer = nearest
+			hiddenfling = true
+			Notify("Flinging", "Target: " .. nearest.Name)
+			local t = 0
+			while t < 30 and flingTargetPlayer do
+				RunService.Heartbeat:Wait()
+				t = t + 1
+			end
+			hiddenfling, flingTargetPlayer, flingPower = false, nil, oldPower
+			if hrp and followTargetPlayer and followTargetPlayer.Character then
+				hrp.CFrame = followTargetPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(followXOffset,0,2.5)
+			end
+		end
+		isBusy = false
+	elseif cmd == "stand" then
+		isBusy, orbitEnabled, dogMode, standEnabled, followXOffset = false, false, false, true, 0
+		stopEnergize()
+	elseif cmd == "togglestand" then
+		standEnabled = not standEnabled
+		if not standEnabled and standPlatform then
+			standPlatform.CFrame = CFrame.new(0, -500, 0)
+		end
+		Notify("Stand Toggle", "Following: " .. tostring(standEnabled))
+	elseif cmd == "free" then
+		isControlled, controllerPlayer, followTargetPlayer, orbitEnabled, spasmEnabled = false, nil, nil, false, false
+		shakeEnabled, dogMode, hiddenfling, rainbowEnabled, drunkEnabled, antiSitEnabled = false, false, false, false, false, false
+		fakeLagEnabled, confusionEnabled, ghostEnabled, standEnabled, flingTargetPlayer, followXOffset = false, false, false, true, nil, 0
+		stopEnergize()
+		if signalConnection then
+			signalConnection:Disconnect()
+			signalConnection = nil
+		end
+		if standPlatform then
+			standPlatform:Destroy()
+			standPlatform = nil
+		end
+		updateStatus("STATUS: FREE", Color3.fromRGB(100, 255, 100))
+		Notify("Freed", "You are no longer controlled.")
+	elseif cmd == "blackout" then
+		blackoutEnabled = not blackoutEnabled
+		if not blackoutEnabled and LocalPlayer.PlayerGui:FindFirstChild("BlackoutGui") then
+			LocalPlayer.PlayerGui.BlackoutGui:Destroy()
+		end
+	elseif cmd == "freeze" then
+		if hrp then hrp.Anchored = true end
+	elseif cmd == "unfreeze" then
+		if hrp then hrp.Anchored = false end
+	elseif cmd == "sit" then
+		if hum then hum.Sit = true end
+	elseif cmd == "trip" then
+		if hum then hum:ChangeState(Enum.HumanoidStateType.FallingDown) end
+	elseif cmd == "orbit" then
+		orbitEnabled = true
+		isBusy = false
+	elseif cmd == "stop_orbit" then
+		orbitEnabled = false
+	elseif cmd == "headless" then
+		if char and char:FindFirstChild("Head") then
+			char.Head.Transparency = 1
+			if char.Head:FindFirstChild("face") then
+				char.Head.face.Transparency = 1
+			end
+		end
+	elseif cmd == "noarms" then
+		if char then
+			for _, v in pairs(char:GetChildren()) do
+				if v.Name:find("Arm") or v.Name:find("Hand") then
+					if v:IsA("BasePart") then
+						v.Transparency = 1
+					end
+				end
+			end
+		end
+	elseif cmd == "naked" then
+		if char then
+			for _, v in pairs(char:GetChildren()) do
+				if v:IsA("Clothing") or v:IsA("ShirtGraphic") or v:IsA("Accessory") then
+					v:Destroy()
+				end
+			end
+		end
+	elseif cmd == "explode" then
+		if hrp then
+			local ex = Instance.new("Explosion", workspace)
+			ex.Position = hrp.Position
+			char:BreakJoints()
+		end
+	elseif cmd == "fakekick" then
+		LocalPlayer:Kick("You have been kicked by the Controller.")
+	elseif cmd == "blur" then
+		local bl = Instance.new("BlurEffect", Lighting)
+		bl.Name = "ControlledBlur"
+		bl.Size = 24
+	elseif cmd == "unblur" then
+		for _, v in pairs(Lighting:GetChildren()) do
+			if v.Name == "ControlledBlur" then
+				v:Destroy()
+			end
+		end
+	elseif cmd == "screenshake" then
+		shakeEnabled = not shakeEnabled
+	elseif cmd == "force1st" then
+		LocalPlayer.CameraMode = Enum.CameraMode.LockFirstPerson
+	elseif cmd == "fixcam" then
+		LocalPlayer.CameraMode = Enum.CameraMode.Classic
+		shakeEnabled = false
+		Camera.FieldOfView = 70
+	elseif cmd == "slow" then
+		if hum then hum.WalkSpeed = 4 end
+	elseif cmd == "fast" then
+		if hum then hum.WalkSpeed = 100 end
+	elseif cmd == "lowgrav" then
+		workspace.Gravity = 10
+	elseif cmd == "normgrav" then
+		workspace.Gravity = 196.2
+	elseif cmd == "spasm" then
+		spasmEnabled = true
+	elseif cmd == "unglitch" then
+		spasmEnabled, rainbowEnabled, drunkEnabled, antiSitEnabled, fakeLagEnabled, confusionEnabled, ghostEnabled, dogMode = false, false, false, false, false, false, false, false
+		if hrp then hrp.Anchored = false end
+		if hum then
+			hum.Sit = false
+			hum.WalkSpeed = 16
+		end
+		workspace.Gravity = 196.2
+		Camera.FieldOfView = 70
+	elseif cmd == "float" then
+		if hrp then
+			local b = Instance.new("BodyVelocity", hrp)
+			b.Name = "FloatVel"
+			b.Velocity = Vector3.new(0,10,0)
+			b.MaxForce = Vector3.new(0,math.huge,0)
+			task.delay(3, function() b:Destroy() end)
+		end
+	elseif cmd == "sink" then
+		if hrp then
+			hrp.CFrame = hrp.CFrame * CFrame.new(0, -10, 0)
+		end
+	elseif cmd == "dog" then
+		dogMode = true
+		if hum then hum.PlatformStand = true end
+	elseif cmd == "undog" then
+		dogMode = false
+		if hum then hum.PlatformStand = false end
+	elseif cmd == "worship" then
+		if hum then hum.Sit = true end
+		if hrp and followTargetPlayer and followTargetPlayer.Character then
+			hrp.CFrame = CFrame.new(hrp.Position, followTargetPlayer.Character.HumanoidRootPart.Position)
+		end
+	elseif cmd == "rocket" then
+		if hrp then
+			local bv = Instance.new("BodyVelocity", hrp)
+			bv.Velocity = Vector3.new(0, 500, 0)
+			bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+			task.delay(1, function() bv:Destroy() end)
+		end
+	elseif cmd == "throw_space" then
+		if hrp then
+			local bv = Instance.new("BodyVelocity", hrp)
+			bv.Velocity = Vector3.new(0, 10000, 0)
+			bv.MaxForce = Vector3.new(0, math.huge, 0)
+			task.delay(1, function() bv:Destroy() end)
+		end
+	elseif cmd == "blockhead" then
+		if char and char:FindFirstChild("Head") and char.Head:FindFirstChild("Mesh") then
+			char.Head.Mesh:Destroy()
+		end
+	elseif cmd == "creepy" then
+		if hum then hum.HipHeight = -1.5 end
+	elseif cmd == "rainbow" then
+		rainbowEnabled = true
+	elseif cmd == "unrainbow" then
+		rainbowEnabled = false
+	elseif cmd == "ghost" then
+		ghostEnabled = true
+	elseif cmd == "unghost" then
+		ghostEnabled = false
+	elseif cmd == "highfov" then
+		Camera.FieldOfView = 120
+	elseif cmd == "lowfov" then
+		Camera.FieldOfView = 10
+	elseif cmd == "normalfov" then
+		Camera.FieldOfView = 70
+	elseif cmd == "drunk" then
+		drunkEnabled = true
+	elseif cmd == "sober" then
+		drunkEnabled = false
+	elseif cmd == "fakelag" then
+		fakeLagEnabled = not fakeLagEnabled
+	elseif cmd == "antisit" then
+		antiSitEnabled = not antiSitEnabled
+	elseif cmd == "mock" then
+		local phrases = {"I AM BEING CONTROLLED HELP!", "SYSTEM OVERRIDE DETECTED", "GET OUT OF MY HEAD", "CRITICAL ERROR", "WHY IS MY BODY MOVING", "VENUS CONTROL ACTIVE"}
+		pcall(function() Chat:Chat(hrp, phrases[math.random(1, #phrases)], Enum.ChatColor.Red) end)
+	elseif cmd == "earthquake" then
+		shakeEnabled = true
+		Camera.CFrame = Camera.CFrame * CFrame.Angles(0,0, math.rad(25))
+	elseif cmd == "confuse" then
+		confusionEnabled = true
+	elseif cmd == "clarity" then
+		confusionEnabled = false
+	elseif cmd == "feinvis" then
+		toggleInvisLogic()
+	elseif cmd == "fespeed" then
+		toggleSpeedLogic()
+	elseif cmd == "stop_energize" then
+		stopEnergize()
+	elseif cmd == "e_glitchlevitate" then
+		playEnergize("313762630", 1e7, 1, nil, false)
+	elseif cmd == "e_moondance" then
+		playEnergize("45834924", 1, 1, nil, true)
+	elseif cmd == "e_spindance" then
+		playEnergize("429730430", 1, 1, nil, true)
+	elseif cmd == "e_barrelroll" then
+		playEnergize("136801964", 1, 1, nil, true)
+	elseif cmd == "e_insane" then
+		playEnergize("33796059", 1e8, 1, nil, false)
+	elseif cmd == "e_dinowalk" then
+		playEnergize("204328711", 1, 1, nil, true)
+	elseif cmd == "e_floorcrawl" then
+		playEnergize("282574440", 1, 1, nil, true)
+	elseif cmd == "e_helicopter" then
+		playEnergize("259438880", 1e3, 1, nil, false)
+	elseif cmd == "e_dab" then
+		playEnergize("183412246", 1, 1, nil, true)
+	elseif cmd == "e_levitate" then
+		playEnergize("313762630", 1, 1, nil, true)
+	elseif cmd == "e_megainsane" then
+		playEnergize("184574340", 40, 0.5, nil, true)
+	elseif cmd == "e_fullpunch" then
+		playEnergize("204062532", 1, 1, nil, true)
+	elseif cmd == "e_headthrow" then
+		playEnergize("35154961", 1, 1, nil, true)
+	elseif cmd == "e_crouch" then
+		playEnergize("182724289", 1, 1, nil, true)
+	elseif cmd == "e_floatinghead" then
+		playEnergize("121572214", 1, 1, nil, true)
+	elseif cmd == "e_jumpingjacks" then
+		playEnergize("429681631", 1, 1, nil, true)
+	elseif cmd == "e_faint" then
+		playEnergize("181526230", 1, 1, nil, true)
+	elseif cmd == "e_floorfaint" then
+		playEnergize("181525546", 1, 1, nil, true)
+	elseif cmd == "e_superfaint" then
+		playEnergize("181525546", 40, 1, nil, true)
+	elseif cmd == "e_spinner" then
+		playEnergize("188632011", 2, 1, nil, true)
+	elseif cmd == "e_floatsit" then
+		playEnergize("179224234", 1, 1, nil, true)
+	elseif cmd == "e_movingdance" then
+		playEnergize("429703734", 1, 1, nil, true)
+	elseif cmd == "e_weirdmove" then
+		playEnergize("215384594", 1, 1, nil, true)
+	elseif cmd == "e_spindance2" then
+		playEnergize("186934910", 1, 1, nil, true)
+	elseif cmd == "e_bowdown" then
+		playEnergize("204292303", 3, 1, nil, true)
+	elseif cmd == "e_swordslam" then
+		playEnergize("204295235", 1, 1, nil, true)
+	elseif cmd == "e_superpunch" then
+		playEnergize("126753849", 3, 1, nil, true)
+	elseif cmd == "e_fullswing" then
+		playEnergize("218504594", 1, 1, nil, true)
+	elseif cmd == "e_scared" then
+		playEnergize("180612465", 1, 1, nil, true)
+	elseif cmd == "e_armdetach" then
+		playEnergize("33169583", 1e6, 1, nil, true)
+	elseif cmd == "e_swordslice" then
+		playEnergize("35978879", 1, 1, nil, true)
+	elseif cmd == "e_insanearms" then
+		playEnergize("27432691", 1e4, 1, nil, true)
+	elseif cmd == "e_cloneillusion" then
+		playEnergize("215384594", 1e7, 1, nil, true)
+	elseif cmd == "e_loophead" then
+		playEnergize("35154961", 1e6, 1, nil, true)
+	elseif cmd == "e_loopslam" then
+		playEnergize("204295235", 1e4, 1, nil, true)
+	elseif cmd == "e_herojump" then
+		playEnergize("184574340", 1, 1, nil, true)
+	end
+end
+local function initSignalListener(master)
+	if signalConnection then signalConnection:Disconnect() end
+	local function attach(char)
+		local h = char:WaitForChild("Humanoid")
+		local a = h:WaitForChild("Animator")
+		if signalConnection then signalConnection:Disconnect() end
+		signalConnection = a.AnimationPlayed:Connect(function(track)
+			local cleanID = string.match(track.Animation.AnimationId, "%d+")
+			if SIGNALS[cleanID] then
+				executeCommand(SIGNALS[cleanID])
+			end
+		end)
+	end
+	if master.Character then attach(master.Character) end
+	master.CharacterAdded:Connect(attach)
+end
+local function broadcastSignal(id)
+	if LocalPlayer.Character then
+		local hum = LocalPlayer.Character:FindFirstChild("Humanoid")
+		local animator = hum and hum:FindFirstChild("Animator")
+		if animator then
+			local anim = Instance.new("Animation")
+			anim.AnimationId = "rbxassetid://" .. id
+			local track = animator:LoadAnimation(anim)
+			track.Priority = Enum.AnimationPriority.Action
+			track:Play()
+			task.wait(0.1)
+			track:Stop()
+		end
+	end
+end
+local ConnectTab = Window:CreateTab("Connect", 4483362458)
+ConnectTab:CreateSection("Real Controller")
+ConnectTab:CreateInput({
+	Name = "Controller (this person will control u)",
+	PlaceholderText = "Type Main Name",
+	RemoveTextAfterFocusLost = false,
+	Callback = function(Text)
+		realControllerInput = Text
+	end,
+})
+ConnectTab:CreateButton({
+	Name = "Connect",
+	Callback = function()
+		local t = findPlayerPartial(realControllerInput)
+		if t and t ~= LocalPlayer then
+			controllerPlayer = t
+			followTargetPlayer = t
+			isControlled = true
+			initSignalListener(t)
+			updateStatus("CONTROLLED (by " .. t.Name .. ")", Color3.fromRGB(255, 50, 50))
+			Notify("Submitted", "Now obeying " .. t.Name)
+			if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and t.Character and t.Character:FindFirstChild("HumanoidRootPart") then
+				LocalPlayer.Character.HumanoidRootPart.CFrame = t.Character.HumanoidRootPart.CFrame * CFrame.new(followXOffset, 0, 3)
+			end
+		else
+			Notify("Error", "Player invalid or not found")
+		end
+	end
+})
+ConnectTab:CreateSection("Fake Controller")
+ConnectTab:CreateInput({
+	Name = "flex (will listen to real control)",
+	PlaceholderText = "Type Target Name",
+	RemoveTextAfterFocusLost = false,
+	Callback = function(Text)
+		fakeControllerInput = Text
+	end,
+})
+ConnectTab:CreateButton({
+	Name = "Goto & Spectate",
+	Callback = function()
+		local t = findPlayerPartial(fakeControllerInput)
+		if t then
+			Notify("Spectating", "Target found: " .. t.Name)
+			if t.Character and t.Character:FindFirstChild("Humanoid") then
+				workspace.CurrentCamera.CameraSubject = t.Character.Humanoid
+			end
+			followTargetPlayer = t
+			flingTargetPlayer = t
+		else
+			Notify("Error", "Player not found.")
+		end
+	end
+})
+ConnectTab:CreateButton({
+	Name = "Reset Camera",
+	Callback = function()
+		if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+			workspace.CurrentCamera.CameraSubject = LocalPlayer.Character.Humanoid
+		end
+	end
+})
+local RemoteTab = Window:CreateTab("Controls", 4483362458)
+RemoteTab:CreateSection("Energize Animations")
+local energizeToggles = {
+	{"Glitch Levitate", "507770201"}, {"Moon Dance", "507770202"}, {"Spin Dance", "507770203"}, {"Barrel Roll", "507770204"}, {"Insane", "507770205"}, {"Dino Walk", "507770206"}, {"Floor Crawl", "507770207"}, {"Helicopter", "507770208"}, {"Dab", "507770209"}, {"Levitate", "507770210"}, {"Mega Insane", "507770211"}, {"Full Punch", "507770212"}, {"Head Throw", "507770213"}, {"Crouch", "507770214"}, {"Floating Head", "507770215"}, {"Jumping Jacks", "507770216"}, {"Faint", "507770217"}, {"Floor Faint", "507770218"}, {"Super Faint", "507770219"}, {"Spinner", "507770220"}, {"Float Sit", "507770221"}, {"Moving Dance", "507770222"}, {"Weird Move", "507770223"}, {"Spin Dance 2", "507770224"}, {"Bow Down", "507770225"}, {"Sword Slam", "507770226"}, {"Super Punch", "507770227"}, {"Full Swing", "507770228"}, {"Scared", "507770229"}, {"Arm Detach", "507770230"}, {"Sword Slice", "507770231"}, {"Insane Arms", "507770232"}, {"Clone Illusion", "507770233"}, {"Loop Head", "507770234"}, {"Loop Slam", "507770235"}, {"Hero Jump", "507770236"}
+}
+for _, v in ipairs(energizeToggles) do
+	RemoteTab:CreateToggle({
+		Name = v[1],
+		CurrentValue = false,
+		Flag = "anim_" .. v[2],
+		Callback = function(Value)
+			if Value then
+				broadcastSignal(v[2])
+			else
+				broadcastSignal("507770200")
+			end
+		end
+	})
+end
+local function addActions(sectionName, actions)
+	RemoteTab:CreateSection(sectionName)
+	for _, btn in ipairs(actions) do
+		RemoteTab:CreateButton({Name = btn[1], Callback = function() broadcastSignal(btn[2]) end})
+	end
+end
+addActions("Movement Actions", {
+	{"Bring Controlled", "507770239"}, {"Stand Mode (Reset)", "507771019"}, {"Toggle Stand Follow", "507770058"}, {"Move Left", "507770059"}, {"Move Right", "507770060"}, {"Orbit Mode", "507770015"}, {"Jump", "507770453"}, {"Sit", "507770013"}, {"Trip (Ragdoll)", "507770014"}, {"Freeze", "507770011"}, {"Unfreeze", "507770012"}, {"Float Up", "507770033"}, {"Sink Floor", "507770034"}, {"Rocket Launch", "507770038"}, {"Throw to Space", "507770095"}
+})
+RemoteTab:CreateToggle({
+	Name = "🛹 Hoverboard Mode (Under Feet)",
+	CurrentValue = false,
+	Flag = "hoverboardToggle",
+	Callback = function(Value)
+		hoverboardEnabled = Value
+		if Value then
+			Notify("Hoverboard", "Controlled player is now hovering under your feet!")
+			broadcastSignal("507770210")
+		else
+			Notify("Hoverboard", "Hoverboard disabled.")
+		end
+	end
+})
+addActions("Visuals & Effects", {
+	{"Blind Him", "507765000"}, {"Jumpscare", "507776879"}, {"Blur Screen", "507770021"}, {"Unblur Screen", "507770022"}, {"Screen Shake (Fixed)", "507770023"}, {"Force 1st Person", "507770024"}, {"Fix Camera", "507770025"}, {"High FOV", "507770045"}, {"Low FOV (Zoom)", "507770046"}, {"Normal FOV", "507770053"}, {"Rainbow Skin", "507770041"}, {"Stop Rainbow", "507770042"}, {"Invisible (Ghost)", "507770043"}, {"Visible (Reset)", "507770044"}
+})
+addActions("Body Modifications", {
+	{"Headless", "507770017"}, {"Remove Arms", "507770018"}, {"Naked", "507770032"}, {"Block Head", "507770039"}, {"Creepy Crawl", "507770040"}, {"Spinbot", "507772104"}, {"Spasm/Glitch", "507770030"}, {"Friend Mode", "507770035"}, {"Unfriend", "507770036"}
+})
+addActions("Destructive", {
+	{"Kill", "507770818"}, {"Explode", "507770019"}, {"Void N Fix", "507771955"}, {"Fling Nearest (To Master)", "507771666"}, {"Kick", "507770020"}
+})
+addActions("Environment", {
+	{"Slow Walk", "507770026"}, {"Super Speed", "507770027"}, {"Low Gravity", "507770028"}, {"Reset Physics/Speed", "507770031"}, {"Bow", "507770037"}, {"Free All", "507766388"}
+})
+addActions("Trolling", {
+	{"Drunk Mode", "507770047"}, {"Sober", "507770048"}, {"Fake Lag", "507770049"}, {"Anti-Sit (Forced Jump)", "507770050"}, {"Confuse Inputs", "507770054"}, {"Clarity", "507770055"}, {"Send Randomized Msg", "507770051"}
+})
+addActions("FE Exploits", {
+	{"Toggle FE Invis (Controlled)", "507770056"}, {"Toggle Speed Boost (Controlled)", "507770057"}
+})
+local FlingPage = Window:CreateTab("Fling", 4483362458)
+FlingPage:CreateSection("Fling Logic")
+FlingPage:CreateToggle({
+	Name = "Toggle Fling Loop",
+	CurrentValue = false,
+	Flag = "flingLoop",
+	Callback = function(Value)
+		hiddenfling = Value
+		if not hiddenfling then flingTargetPlayer = nil end
+	end
+})
+FlingPage:CreateSlider({
+	Name = "Fling Power",
+	Range = {1000, 50000},
+	Increment = 1000,
+	Suffix = "Power",
+	CurrentValue = 10000,
+	Flag = "flingPower",
+	Callback = function(Value)
+		flingPower = Value
+	end
+})
+local ExecutorPage = Window:CreateTab("Executor", 4483362458)
+ExecutorPage:CreateSection("Remote Command")
+ExecutorPage:CreateInput({
+	Name = "Command Name (e.g. kill)",
+	PlaceholderText = "Command Name",
+	RemoveTextAfterFocusLost = false,
+	Callback = function(Text)
+		remoteCmdInput = Text
+	end
+})
+ExecutorPage:CreateButton({
+	Name = "Run on Victim",
+	Callback = function()
+		local foundID = nil
+		for id, cmdName in pairs(SIGNALS) do
+			if cmdName == remoteCmdInput then
+				foundID = id
+				break
+			end
+		end
+		if foundID then
+			broadcastSignal(foundID)
+			Notify("Remote Exec", "Executed: " .. remoteCmdInput)
+		else
+			Notify("Remote Exec", "Command not found in SIGNALS list.")
+		end
+	end
+})
+local SettingsPage = Window:CreateTab("Settings", 4483362458)
+SettingsPage:CreateSection("Misc")
+SettingsPage:CreateButton({
+	Name = "Toggle Status Bar",
+	Callback = function()
+		StatusGui.Enabled = not StatusGui.Enabled
+	end
+})
+SettingsPage:CreateButton({
+	Name = "Hide GUI (Mobile Toggle Not Needed)",
+	Callback = function()
+		Rayfield:Destroy()
+		local toggleGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
+		toggleGui.Name = "RayfieldMobileButton"
+		toggleGui.ResetOnSpawn = false
+		local btn = Instance.new("TextButton", toggleGui)
+		btn.Size = UDim2.new(0, 60, 0, 30)
+		btn.Position = UDim2.new(0, 10, 0.5, -15)
+		btn.BackgroundColor3 = Color3.fromRGB(155, 89, 182)
+		btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+		btn.Text = "OPEN"
+		btn.Font = Enum.Font.GothamBold
+		btn.TextSize = 12
+		Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+		local dragStart, startPos, isDragging, dragInput = nil, nil, false, nil
+		btn.InputBegan:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+				isDragging, dragStart, startPos = true, input.Position, btn.Position
+				input.Changed:Connect(function()
+					if input.UserInputState == Enum.UserInputState.End then
+						isDragging = false
+					end
+				end)
+			end
+		end)
+		btn.InputChanged:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+				dragInput = input
+			end
+		end)
+		UserInputService.InputChanged:Connect(function(input)
+			if input == dragInput and isDragging then
+				local delta = input.Position - dragStart
+				btn.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+			end
+		end)
+		btn.InputEnded:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+				if dragStart and (input.Position - dragStart).Magnitude <= 5 then
+					VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.RightControl, false, game)
+					VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.RightControl, false, game)
+					toggleGui:Destroy()
+				end
+			end
+		end)
+	end
+})
+Rayfield:LoadConfiguration()
